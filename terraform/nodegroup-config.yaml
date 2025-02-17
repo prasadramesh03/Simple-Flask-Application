@@ -1,0 +1,22 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: devops-project-cluster
+  region: us-east-2
+vpc:
+  id: vpc-0cefab3e8dd9393cc
+  subnets:
+    public:
+      subnet-0bd1f47ff55debc07: {}
+      subnet-0802d3514f662058e: {}
+      subnet-0bc8a4d475472a259: {}
+nodeGroups:
+  - name: devops-nodegroup
+    instanceType: t2.micro
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 3
+    subnets:
+      - subnet-0bd1f47ff55debc07
+      - subnet-0802d3514f662058e
+      - subnet-0bc8a4d475472a259
