@@ -1,3 +1,8 @@
 flask==2.0.2
 werkzeug==2.0.2
 pytest==7.0.1
+prometheus-flask-exporter==0.22.3
+opentelemetry-api==1.11.1
+opentelemetry-sdk==1.11.1
+opentelemetry-instrumentation-flask==0.30b1
+opentelemetry-exporter-jaeger==1.11.1

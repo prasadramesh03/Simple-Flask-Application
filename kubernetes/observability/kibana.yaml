@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+spec:
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: kibana:7.17.0
+        ports:
+        - containerPort: 5601
+        env:
+        - name: ELASTICSEARCH_HOSTS
+          value: http://elasticsearch:9200
+        resources:
+          requests:
+            cpu: "200m"     # Requests 0.2 CPU
+            memory: "512Mi" # Requests 512MB RAM
+          limits:
+            cpu: "1"        # Max 1 CPU
+            memory: "1Gi"   # Max 1GB RAM

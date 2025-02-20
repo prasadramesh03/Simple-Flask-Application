@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app
+spec:
+  selector:
+    matchLabels:
+      app: flask-app  # This ensures the deployment manages pods with this label
+  template:
+    metadata:
+      labels:
+        app: flask-app  # Labels should match the selector
+    spec:
+      containers:
+      - name: flask-app
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"

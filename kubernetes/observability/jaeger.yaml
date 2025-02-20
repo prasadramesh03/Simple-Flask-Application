@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+spec:
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+      - name: jaeger
+        image: jaegertracing/all-in-one:1.30
+        ports:
+        - containerPort: 16686
+        - containerPort: 6831
+        resources:
+          requests:
+            cpu: "100m"   # Requests 100 milliCPU (0.1 CPU)
+            memory: "128Mi"  # Requests 128MB RAM
+          limits:
+            cpu: "500m"   # Maximum 500 milliCPU (0.5 CPU)
+            memory: "512Mi"  # Maximum 512MB RAM
