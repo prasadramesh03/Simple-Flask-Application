@@ -79,7 +79,7 @@ pipeline {
             steps {
                 sh '''
                     cd terraform
-                    tfsec .
+                    tfsec . 
                     checkov -d .
                 '''
             }
@@ -91,6 +91,19 @@ pipeline {
                     sh """
                         kubectl apply -f kubernetes/
                         kubectl set image deployment/flask-app flask-app=${DOCKER_IMAGE}:${BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+
+        // Add the Canary Deploy stage
+        stage('Canary Deploy') {
+            steps {
+                script {
+                    def canaryWeight = 20
+                    sh """
+                        kubectl apply -f kubernetes/deployments/canary/deployment-canary.yaml
+                        kubectl annotate ingress flask-app-ingress nginx.ingress.kubernetes.io/canary-weight="${canaryWeight}" --overwrite
                     """
                 }
             }

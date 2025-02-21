@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app
+spec:
+  minReadySeconds: 10
+  paused: false
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: flask-app   # This label will match the Pods created by the Deployment
+  template:
+    metadata:
+      labels:
+        app: flask-app   # Ensure this label matches the selector above
+    spec:
+      serviceAccountName: flask-app-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: flask-app
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        image: flask-app-image:latest
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

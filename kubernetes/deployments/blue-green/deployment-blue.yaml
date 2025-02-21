@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app-blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: flask-app
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: flask-app
+        version: blue
+    spec:
+      containers:
+      - name: flask-app
+        image: your-registry/flask-app:blue
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            memory: "256Mi"    # Request 256 MiB of memory
+            cpu: "250m"        # Request 250 milliCPU (0.25 of a CPU core)
+          limits:
+            memory: "512Mi"    # Limit the memory usage to 512 MiB
+            cpu: "500m"        # Limit the CPU usage to 500 milliCPU (0.5 of a CPU core)

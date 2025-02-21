@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cost-alerts
+spec:
+  groups:
+  - name: cost.rules
+    rules:
+    - alert: HighCostSpike
+      expr: kubecost_cluster_cost_hourly > 100
+      for: 6h
+      labels:
+        severity: warning
+      annotations:
+        description: "Cluster costs have exceeded $100/hour for 6 hours"

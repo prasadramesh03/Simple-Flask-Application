@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-backup
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: bitnami/mysqldump:latest
+            env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: backup-config
+                  key: db_host
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
+            volumeMounts:
+            - name: backup-volume
+              mountPath: /backup
+          volumes:
+          - name: backup-volume
+            persistentVolumeClaim:
+              claimName: backup-pvc
+          restartPolicy: OnFailure

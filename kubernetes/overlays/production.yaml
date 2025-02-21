@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flask-app-production
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/prasadramesh03/Simple-Flask-Application.git
+    targetRevision: main
+    path: kubernetes
+    helm:
+      values: |
+        environment: production
+        replicas: 4

@@ -7,7 +7,9 @@ from opentelemetry.instrumentation.flask import FlaskInstrumentation
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 import logging
-import json
+from elasticapm.contrib.flask import ElasticAPM
+from prometheus_client import Counter, Histogram, generate_latest
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -16,7 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize tracing
+# Initialize tracing with OpenTelemetry
 trace.set_tracer_provider(TracerProvider())
 jaeger_exporter = JaegerExporter(
     agent_host_name="jaeger",
@@ -26,9 +28,27 @@ trace.get_tracer_provider().add_span_processor(
     BatchSpanProcessor(jaeger_exporter)
 )
 
+# Elastic APM configuration
 app = Flask(__name__)
-FlaskInstrumentation().instrument_app(app)
+app.config['ELASTIC_APM'] = {
+    'SERVICE_NAME': 'flask-app',
+    'SERVER_URL': 'http://flask-apm:8200',
+    'ENVIRONMENT': 'production'
+}
+apm = ElasticAPM(app)
+
+# Prometheus metrics
 metrics = PrometheusMetrics(app)
+REQUEST_COUNT = Counter(
+    'flask_request_count', 
+    'Total request count of the app'
+)
+REQUEST_LATENCY = Histogram(
+    'flask_request_latency_seconds', 
+    'Request latency in seconds'
+)
+
+FlaskInstrumentation().instrument_app(app)
 
 # Add request logging middleware
 @app.before_request
@@ -51,7 +71,7 @@ def health_check():
 @app.route('/metrics')
 def metrics_endpoint():
     logger.info('Metrics endpoint called')
-    return jsonify(metrics.registry)
+    return generate_latest()
 
 @app.route('/info')
 def info():
@@ -68,10 +88,14 @@ def hello():
         hostname = socket.gethostname()
         span.set_attribute("hostname", hostname)
         logger.info(f'Hello endpoint called from {hostname}')
-        return jsonify({
-            "message": "Hello from the DevOps Project!",
-            "hostname": hostname
-        })
+        
+        # Prometheus request count and latency
+        REQUEST_COUNT.inc()
+        start_time = time.time()
+        response = {"message": "Hello from the DevOps Project!", "hostname": hostname}
+        REQUEST_LATENCY.observe(time.time() - start_time)
+
+        return jsonify(response)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

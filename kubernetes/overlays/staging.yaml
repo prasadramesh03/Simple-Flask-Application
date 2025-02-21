@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flask-app-staging
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/prasadramesh03/Simple-Flask-Application.git
+    targetRevision: staging
+    path: kubernetes
+    helm:
+      values: |
+        environment: staging
+        replicas: 2

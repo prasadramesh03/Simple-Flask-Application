@@ -1,0 +1,13 @@
+apiVersion: apm.k8s.elastic.co/v1
+kind: ApmServer
+metadata:
+  name: flask-apm
+spec:
+  version: 7.17.0
+  count: 1
+  config:
+    apm-server:
+      host: "0.0.0.0:8200"
+    output:
+      elasticsearch:
+        hosts: ["elasticsearch-master:9200"]

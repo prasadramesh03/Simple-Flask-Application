@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flask-dashboards
+data:
+  flask-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Flask Application Metrics",
+        "panels": [
+          {
+            "title": "Request Rate",
+            "type": "graph",
+            "datasource": "Prometheus"
+          },
+          {
+            "title": "Response Times",
+            "type": "graph",
+            "datasource": "Prometheus"
+          }
+        ]
+      }
+    }
