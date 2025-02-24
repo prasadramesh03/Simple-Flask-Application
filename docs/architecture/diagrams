@@ -1,0 +1,39 @@
+flowchart TB
+    subgraph External
+        Users[Users]
+        CI[CI/CD Pipeline]
+    end
+
+    subgraph Kubernetes Cluster
+        subgraph Ingress
+            ING[Ingress Controller]
+        end
+
+        subgraph Services
+            API[Flask API]
+            DB[(Database)]
+        end
+
+        subgraph Monitoring
+            PROM[Prometheus]
+            GRAF[Grafana]
+            ALERT[AlertManager]
+        end
+
+        subgraph Security
+            SCAN[Security Scanner]
+            AUDIT[Audit Logging]
+        end
+
+        subgraph Backup
+            VELERO[Velero Backup]
+        end
+    end
+
+    Users --> ING
+    ING --> API
+    API --> DB
+    API --> PROM
+    PROM --> GRAF
+    PROM --> ALERT
+    CI --> API

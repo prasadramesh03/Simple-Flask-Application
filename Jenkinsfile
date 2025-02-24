@@ -1,126 +1,89 @@
+// Jenkinsfile
+def qualityGate = load 'pipeline/quality-gates.groovy'
+
 pipeline {
     agent any
-
+    
     environment {
-        DOCKER_IMAGE = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/flask-app"
-        AWS_REGION = 'us-west-2'
-        KUBECTL_CONFIG = credentials('kubectl-config')
-        SNYK_TOKEN = credentials('snyk-token')
-        SONAR_TOKEN = credentials('sonar-token')
+        DOCKER_IMAGE = 'your-registry/flask-app'
+        KUBECONFIG = credentials('kubeconfig')
     }
-
+    
     stages {
-        stage('Checkout') {
+        stage('Code Quality') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Security Scan - Code') {
-            parallel {
-                stage('SAST - SonarQube') {
-                    steps {
-                        sh '''
-                            sonar-scanner \
-                              -Dsonar.projectKey=flask-app \
-                              -Dsonar.sources=. \
-                              -Dsonar.host.url=http://sonarqube:9000 \
-                              -Dsonar.login=$SONAR_TOKEN
-                        '''
+                script {
+                    def qualityCheck = qualityGate.check()
+                    if (!qualityCheck) {
+                        error "Quality gate failed"
                     }
                 }
-                
-                stage('Dependencies - Snyk') {
-                    steps {
-                        sh '''
-                            cd app
-                            snyk test --all-projects
-                        '''
-                    }
+                sh 'pylint app/'
+                sh 'pytest app/tests/'
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                sh 'trivy image $DOCKER_IMAGE:$BUILD_NUMBER'
+                sh 'snyk test'
+            }
+        }
+        
+        stage('Build & Push') {
+            steps {
+                sh """
+                    docker build -t $DOCKER_IMAGE:$BUILD_NUMBER .
+                    docker push $DOCKER_IMAGE:$BUILD_NUMBER
+                """
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            steps {
+                sh """
+                    kubectl apply -f kubernetes/deployments/staging/
+                    kubectl set image deployment/flask-app \
+                    flask-app=$DOCKER_IMAGE:$BUILD_NUMBER -n staging
+                """
+            }
+        }
+        
+        stage('Integration Tests') {
+            steps {
+                sh 'pytest integration_tests/'
+            }
+        }
+        
+        stage('Production Approval') {
+            steps {
+                timeout(time: 24, unit: 'HOURS') {
+                    input message: 'Approve deployment to production?'
                 }
             }
         }
-
-        stage('Run Tests') {
+        
+        stage('Deploy to Production') {
             steps {
-                dir('app') {
-                    sh 'pip install -r requirements.txt'
-                    sh 'python -m pytest test_app.py'
-                }
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
-                }
-            }
-        }
-
-        stage('Security Scan - Container') {
-            steps {
-                sh "trivy image ${DOCKER_IMAGE}:${BUILD_NUMBER}"
-            }
-        }
-
-        stage('Push to ECR') {
-            steps {
-                script {
-                    sh """
-                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${DOCKER_IMAGE}
-                        docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
-                    """
-                }
-            }
-        }
-
-        stage('Security Scan - Infrastructure') {
-            steps {
-                sh '''
-                    cd terraform
-                    tfsec . 
-                    checkov -d .
-                '''
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    sh """
-                        kubectl apply -f kubernetes/
-                        kubectl set image deployment/flask-app flask-app=${DOCKER_IMAGE}:${BUILD_NUMBER}
-                    """
-                }
-            }
-        }
-
-        // Add the Canary Deploy stage
-        stage('Canary Deploy') {
-            steps {
-                script {
-                    def canaryWeight = 20
-                    sh """
-                        kubectl apply -f kubernetes/deployments/canary/deployment-canary.yaml
-                        kubectl annotate ingress flask-app-ingress nginx.ingress.kubernetes.io/canary-weight="${canaryWeight}" --overwrite
-                    """
-                }
+                sh """
+                    kubectl apply -f kubernetes/deployments/production/
+                    kubectl set image deployment/flask-app \
+                    flask-app=$DOCKER_IMAGE:$BUILD_NUMBER -n production
+                """
             }
         }
     }
-
+    
     post {
-        always {
-            cleanWs()
-            // Send security scan reports to monitoring system
-            sh 'send-security-reports.sh'
-        }
         success {
-            echo 'Pipeline succeeded! Application deployed successfully.'
+            slackSend channel: '#deployments',
+                      color: 'good',
+                      message: "Deployment successful: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
         failure {
-            echo 'Pipeline failed! Check the logs for details.'
+            slackSend channel: '#deployments',
+                      color: 'danger',
+                      message: "Deployment failed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
         }
     }
 }
